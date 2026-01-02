@@ -1,0 +1,108 @@
+/**
+ * Internationalization utilities for StreakHub Card
+ */
+
+import type { Translations, HomeAssistant, SupportedLanguage } from '../types';
+
+// =============================================================================
+// Translation Definitions
+// =============================================================================
+
+const TRANSLATIONS: Record<'en' | 'de', Translations> = {
+  en: {
+    days: 'days',
+    day: 'day',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    day_before: 'Day before yesterday',
+    more: 'More…',
+    when_event: 'When did it happen?',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    invalid_entity: 'Invalid entity type',
+    invalid_data: 'Invalid entity data',
+    unavailable: 'Unavailable',
+    close: 'Close',
+  },
+  de: {
+    days: 'Tage',
+    day: 'Tag',
+    today: 'Heute',
+    yesterday: 'Gestern',
+    day_before: 'Vorgestern',
+    more: 'Mehr…',
+    when_event: 'Wann war das Ereignis?',
+    cancel: 'Abbrechen',
+    confirm: 'Bestätigen',
+    invalid_entity: 'Ungültiger Entity-Typ',
+    invalid_data: 'Ungültige Entity-Daten',
+    unavailable: 'Nicht verfügbar',
+    close: 'Schließen',
+  },
+};
+
+// =============================================================================
+// Language Resolution
+// =============================================================================
+
+/**
+ * Get the language code from Home Assistant locale
+ */
+function getHassLanguage(hass: HomeAssistant | undefined): string | undefined {
+  const lang = hass?.locale?.language;
+  if (!lang) return undefined;
+  // Extract base language from locale (e.g., "de-DE" -> "de")
+  return lang.split('-')[0]?.toLowerCase();
+}
+
+/**
+ * Check if a language is supported
+ */
+function isSupportedLanguage(lang: string): lang is 'en' | 'de' {
+  return lang === 'en' || lang === 'de';
+}
+
+/**
+ * Get translations based on config and Home Assistant settings
+ *
+ * Resolution order:
+ * 1. Config language override (if not 'auto')
+ * 2. Home Assistant user language
+ * 3. Fallback to English
+ */
+export function getTranslations(
+  hass: HomeAssistant | undefined,
+  configLanguage?: SupportedLanguage
+): Translations {
+  // 1. Config override
+  if (configLanguage && configLanguage !== 'auto') {
+    if (isSupportedLanguage(configLanguage)) {
+      return TRANSLATIONS[configLanguage];
+    }
+  }
+
+  // 2. Home Assistant user language
+  const hassLang = getHassLanguage(hass);
+  if (hassLang && isSupportedLanguage(hassLang)) {
+    return TRANSLATIONS[hassLang];
+  }
+
+  // 3. Fallback to English
+  return TRANSLATIONS.en;
+}
+
+/**
+ * Get the first day of the week from Home Assistant locale
+ *
+ * @returns 0 for Sunday, 1 for Monday
+ */
+export function getWeekStart(hass: HomeAssistant | undefined): number {
+  const firstWeekday = hass?.locale?.first_weekday;
+
+  if (firstWeekday === 'sunday') {
+    return 0;
+  }
+
+  // Default: Monday (European standard)
+  return 1;
+}
