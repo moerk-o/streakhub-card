@@ -48,6 +48,43 @@ export class StreakHubCardEditor extends LitElement {
   @state()
   private _config?: StreakHubCardConfig;
 
+  @state()
+  private _helpers?: unknown;
+
+  /**
+   * Preload HA elements (entity picker, etc.) using loadCardHelpers
+   * This is required because custom cards don't have automatic access to HA components
+   */
+  private async _loadCardHelpers(): Promise<void> {
+    if (this._helpers) return;
+
+    // Check if ha-entity-picker is already available
+    if (window.customElements.get('ha-entity-picker')) {
+      this._helpers = true;
+      return;
+    }
+
+    try {
+      // Load card helpers from Home Assistant
+      const helpers = await (window as unknown as { loadCardHelpers: () => Promise<unknown> }).loadCardHelpers();
+      this._helpers = helpers;
+
+      // Create a temporary entities card to trigger loading of ha-entity-picker
+      const cardHelpers = helpers as { createCardElement: (config: unknown) => Promise<{ constructor: { getConfigElement: () => Promise<void> } }> };
+      const card = await cardHelpers.createCardElement({ type: 'entities', entities: [] });
+      await card.constructor.getConfigElement();
+    } catch (e) {
+      // Fallback: helpers not available, but component might still work
+      console.warn('StreakHub Card: Could not load card helpers', e);
+      this._helpers = true;
+    }
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this._loadCardHelpers();
+  }
+
   static override styles = css`
     :host {
       display: block;
@@ -193,21 +230,6 @@ export class StreakHubCardEditor extends LitElement {
   }
 
   /**
-   * Get entities that have the StreakHub top_3 attribute
-   */
-  private _getStreakHubEntities(): string[] {
-    if (!this.hass) return [];
-
-    return Object.keys(this.hass.states).filter((entityId) => {
-      const entity = this.hass!.states[entityId];
-      return (
-        entityId.startsWith('sensor.') &&
-        Array.isArray(entity?.attributes?.top_3)
-      );
-    });
-  }
-
-  /**
    * Handle entity picker change
    */
   private _handleEntityChange(e: CustomEvent): void {
@@ -268,11 +290,18 @@ export class StreakHubCardEditor extends LitElement {
   }
 
   /**
+   * Entity filter function for ha-entity-picker
+   */
+  private _entityFilter = (entity: { entity_id: string }): boolean => {
+    if (!this.hass) return false;
+    const stateObj = this.hass.states[entity.entity_id];
+    return Array.isArray(stateObj?.attributes?.top_3);
+  };
+
+  /**
    * Render entity picker
    */
   private _renderEntityPicker() {
-    const streakHubEntities = this._getStreakHubEntities();
-
     return html`
       <div class="row">
         <label>Entity</label>
@@ -280,8 +309,7 @@ export class StreakHubCardEditor extends LitElement {
           .hass=${this.hass}
           .value=${this._config?.entity ?? ''}
           .includeDomains=${['sensor']}
-          .entityFilter=${(entity: { entity_id: string }) =>
-            streakHubEntities.includes(entity.entity_id)}
+          .entityFilter=${this._entityFilter}
           @value-changed=${this._handleEntityChange}
           allow-custom-entity
         ></ha-entity-picker>
@@ -467,6 +495,11 @@ export class StreakHubCardEditor extends LitElement {
   protected override render() {
     if (!this.hass || !this._config) {
       return nothing;
+    }
+
+    // Wait for helpers to load before rendering entity picker
+    if (!this._helpers) {
+      return html`<div>Loading...</div>`;
     }
 
     return html`
