@@ -115,10 +115,10 @@ function buildSchema(): HaFormSchema[] {
       selector: { boolean: {} },
     },
     // Visibility section (expandable)
+    // Note: flatten is NOT set here, so the values stay nested under 'show'
     {
       name: 'show',
       type: 'expandable',
-      flatten: true,
       iconPath:
         'M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z',
       schema: [
@@ -267,11 +267,16 @@ export class StreakHubCardEditor extends LitElement {
    * Handle value changes from ha-form
    */
   private _valueChanged(ev: CustomEvent): void {
-    const config = ev.detail.value as StreakHubCardConfig;
+    const formData = ev.detail.value as Record<string, unknown>;
 
-    // Handle special case: reset-flow action
-    // Since ui_action doesn't include reset-flow, we need to handle it separately
-    // For now, hold_action defaults to reset-flow internally
+    // Merge form data with existing config to preserve 'type' and other fields
+    const config: StreakHubCardConfig = {
+      ...this._config,
+      ...formData,
+    } as StreakHubCardConfig;
+
+    // Update internal state
+    this._config = config;
 
     this.dispatchEvent(
       new CustomEvent('config-changed', {

@@ -553,6 +553,7 @@ window.customCards.push({
 - [ ] Konfigurierbare Icons (eigene MDI Icons für Pokal/Medaille wählen)
 - [ ] Konfigurierbare Farben für Ränge (Gold/Silber/Bronze überschreiben)
 - [ ] Custom SVG-Grafiken als Alternative zu MDI Icons
+- [ ] Subtile Transition (~150ms) beim Ein-/Ausblenden von Inline-Elementen (Reset-Flow, Kalender, Fehlermeldungen) für weniger abrupte Übergänge
 
 ---
 
