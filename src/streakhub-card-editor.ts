@@ -100,11 +100,14 @@ function buildBasicSchema(): HaFormSchema[] {
 }
 
 // Schema for single action (used when reset-flow toggle is off)
+// Excludes 'toggle' since it doesn't make sense for streak sensors
 const ACTION_SCHEMA: HaFormSchema[] = [
   {
     name: 'action',
     selector: {
-      ui_action: {},
+      ui_action: {
+        actions: ['more-info', 'navigate', 'url', 'perform-action', 'assist', 'none'],
+      },
     },
   },
 ];
