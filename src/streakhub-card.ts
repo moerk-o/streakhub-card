@@ -582,7 +582,7 @@ window.customCards.push({
 
 // Console info
 console.info(
-  `%c STREAKHUB-CARD %c v1.0.0 `,
+  `%c STREAKHUB-CARD %c v${'__VERSION__'} `,
   'color: white; background: #FFD700; font-weight: bold;',
   'color: #FFD700; background: #333;'
 );
