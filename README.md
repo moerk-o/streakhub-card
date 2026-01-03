@@ -1,62 +1,85 @@
 # StreakHub Card
 
-A Home Assistant Lovelace card for visualizing streak progress with the [StreakHub](https://github.com/your-repo/streakhub) integration.
+A Home Assistant Lovelace card for visualizing streak progress with the [StreakHub](https://github.com/MaximilianSoeworx/streakhub) integration.
 
 ![StreakHub Card Preview](docs/preview.png)
+<!-- TODO: Add actual screenshot showing card variants -->
+
+## What is StreakHub?
+
+**StreakHub** is a Home Assistant integration for tracking "streaks" - the number of consecutive days WITHOUT a specific event. Common use cases:
+
+- Days without sugar
+- Days without smoking
+- Days without alcohol
+- Any habit you want to track
+
+The card displays your current streak with visual indicators showing how your current streak compares to your personal bests.
 
 ## Features
 
-- **Trophy/Medal System** - Gold, silver, and bronze trophies for top 3 streaks
-- **Two Display Modes** - Standard (vertical) and compact (horizontal) layouts
-- **Quick Reset Flow** - Long-press to quickly reset streaks with Today/Yesterday/Day before buttons
+- **Trophy/Medal Icons** - Visual ranking based on your top 3 personal best streaks
+- **Two Display Variants** - Standard (vertical) and compact (horizontal) layouts
+- **Quick Reset Flow** - Reset streaks with Today/Yesterday/Day before buttons (default: long-press, configurable to any tap action)
 - **Calendar Picker** - Select any date within your current streak for precise resets
-- **Full Localization** - English and German, auto-detects from Home Assistant settings
-- **Visual Editor** - Full UI configuration, no YAML required
+- **Full Localization** - English and German, auto-detects from Home Assistant settings (can be overridden)
+- **Visual Editor** - Nearly complete UI configuration with native Home Assistant look and feel
 - **Theme Support** - Respects Home Assistant themes and supports custom CSS variables
+
+## Requirements
+
+- Home Assistant 2024.1 or newer
+- [StreakHub Integration](https://github.com/MaximilianSoeworx/streakhub) installed and configured
 
 ## Installation
 
-### HACS (Recommended)
-
-1. Open HACS in Home Assistant
-2. Go to "Frontend" section
-3. Click the three dots menu and select "Custom repositories"
-4. Add this repository URL with category "Lovelace"
-5. Search for "StreakHub Card" and install
-6. Refresh your browser
-
 ### Manual Installation
 
-1. Download `streakhub-card.js` from the [latest release](https://github.com/your-repo/streakhub-card/releases)
-2. Copy it to your `config/www/` folder
+1. Download `streakhub-card.js` from the [latest release](https://github.com/MaximilianSoeworx/streakhub-card/releases)
+2. Copy it to your Home Assistant `config/www/` folder
 3. Add the resource in Home Assistant:
-   - Go to **Settings** → **Dashboards** → **Resources**
+   - Go to **Settings** → **Dashboards** → **Resources** (top right menu)
    - Click **Add Resource**
    - URL: `/local/streakhub-card.js`
    - Resource type: **JavaScript Module**
-4. Refresh your browser
+4. Refresh your browser (hard refresh: Ctrl+F5 / Cmd+Shift+R)
 
-## Usage
+> **Note:** If your `www` folder doesn't exist, create it inside your `config` directory.
 
-### Minimal Configuration
+## Configuration
+
+### Using the Visual Editor
+
+1. Add a new card to your dashboard
+2. Search for "StreakHub Card" in the card picker
+3. Select a StreakHub entity
+4. Configure options using the UI
+
+![Visual Editor](docs/editor.png)
+<!-- TODO: Add screenshot of the visual editor -->
+
+### YAML Configuration
+
+#### Minimal Configuration
 
 ```yaml
 type: custom:streakhub-card
 entity: sensor.sugar_rank
 ```
 
-### Full Configuration
+#### Full Configuration
 
 ```yaml
 type: custom:streakhub-card
 entity: sensor.sugar_rank
 
 # Display options
-name: "Sugar Free Streak"       # Override device name
+name: "Sugar Free Streak"       # Override device name (optional)
 variant: standard               # standard | compact
 borderless: false               # Remove card border/background
+language: auto                  # auto | en | de
 
-# Visibility
+# Element visibility
 show:
   trophy: true                  # Show trophy/medal icon
   rank: true                    # Show rank indicator (#1, #2, #3)
@@ -65,31 +88,91 @@ show:
 
 # Actions
 tap_action:
-  action: more-info             # more-info | reset-flow | none | navigate | url | call-service
+  action: more-info
 hold_action:
-  action: reset-flow
+  action: reset-flow            # Opens the reset dialog (default for hold)
 double_tap_action:
   action: none
-
-# Language
-language: auto                  # auto | en | de
 ```
 
-### Advanced: Renamed Entities
+### Configuration Options
 
-If you've renamed your StreakHub entities, use `service_target` to specify the original entity for service calls:
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `entity` | string | **required** | Entity ID of a StreakHub rank sensor |
+| `name` | string | Device name | Custom name to display |
+| `variant` | string | `standard` | Display variant: `standard` or `compact` |
+| `borderless` | boolean | `false` | Hide card border and background |
+| `language` | string | `auto` | Force language: `auto`, `en`, or `de` |
+| `show.trophy` | boolean | `true` | Show trophy/medal icon |
+| `show.rank` | boolean | `true` | Show rank indicator (#1, #2, #3) |
+| `show.days` | boolean | `true` | Show days counter |
+| `show.name` | boolean | `true` | Show tracker name |
+
+### Action Configuration
+
+Actions can be configured for tap, hold, and double-tap gestures:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `tap_action` | `more-info` | Action on single tap |
+| `hold_action` | `reset-flow` | Action on long press |
+| `double_tap_action` | `none` | Action on double tap |
+
+#### Available Actions
+
+| Action | Description |
+|--------|-------------|
+| `more-info` | Open entity details dialog |
+| `reset-flow` | Open streak reset dialog (custom action) |
+| `none` | No action |
+| `navigate` | Navigate to a path (requires `navigation_path`) |
+| `url` | Open a URL (requires `url_path`) |
+| `perform-action` | Call a Home Assistant action |
+| `assist` | Open the Assist dialog |
+
+#### Reset Flow Action
+
+The `reset-flow` action is a custom action specific to StreakHub Card. It opens an inline dialog where you can quickly reset your streak:
+
+```
+┌─────────────────────────────────────────┐
+│           Sugar Free Streak             │
+│                                         │
+│  ┌────────┬─────────┬───────────┬─────┐ │
+│  │ Today  │Yesterday│Day before │More…│ │
+│  └────────┴─────────┴───────────┴─────┘ │
+│                                         │
+│              47 days                    │
+└─────────────────────────────────────────┘
+```
+
+- **Today/Yesterday/Day before**: Quick reset without confirmation
+- **More...**: Opens a calendar picker for selecting any date within your streak
+
+### Advanced: Renamed Entities (YAML only)
+
+If you've renamed your StreakHub entities in Home Assistant, you may need `service_target`. When you rename an entity in the HA UI, the display changes but internally Home Assistant may still use the original entity ID for service calls. In this case:
+
+- `entity`: Your renamed entity ID (used to read state and display data)
+- `service_target`: The original entity ID (used for the `streakhub.set_streak_start` service call)
 
 ```yaml
 type: custom:streakhub-card
-entity: sensor.my_custom_name       # Your renamed entity
-service_target: sensor.sugar_rank   # Original entity for service calls
+entity: sensor.my_custom_name       # Renamed entity (for display)
+service_target: sensor.sugar_rank   # Original entity ID (for reset service)
 ```
 
-## Display Modes
+> **Note:** This option is only available via YAML, not in the visual editor.
 
-### Standard Mode
+## Display Variants
+
+### Standard Variant
 
 Vertical layout with large trophy icon, ideal as a standalone feature card.
+
+![Standard Variant](docs/variant-standard.png)
+<!-- TODO: Add screenshot of standard variant -->
 
 ```
 ┌─────────────────────────┐
@@ -102,9 +185,12 @@ Vertical layout with large trophy icon, ideal as a standalone feature card.
 └─────────────────────────┘
 ```
 
-### Compact Mode
+### Compact Variant
 
-Horizontal layout, perfect for dashboards with limited space.
+Horizontal layout, perfect for dashboards with limited space or tile-style layouts.
+
+![Compact Variant](docs/variant-compact.png)
+<!-- TODO: Add screenshot of compact variant -->
 
 ```
 ┌──────────────────────────────────┐
@@ -114,16 +200,22 @@ Horizontal layout, perfect for dashboards with limited space.
 
 ## Trophy System
 
+Your streak ranking determines the displayed icon and color:
+
 | Rank | Icon | Color |
 |------|------|-------|
-| #1 | Trophy | Gold (#FFD700) |
-| #2 | Trophy | Silver (#C0C0C0) |
-| #3 | Trophy | Bronze (#CD7F32) |
-| 4+ | Medal | Neutral (theme color) |
+| #1 | Trophy (mdi:trophy) | Gold (#FFD700) |
+| #2 | Trophy (mdi:trophy) | Silver (#C0C0C0) |
+| #3 | Trophy (mdi:trophy) | Bronze (#CD7F32) |
+| 4+ | Medal (mdi:medal-outline) | Neutral (theme color) |
 
-## CSS Custom Properties
+The rank is based on your top 3 longest streaks provided by the StreakHub integration.
 
-Customize the card appearance using CSS variables:
+## Customization
+
+### CSS Custom Properties
+
+Customize the card appearance using CSS variables. You can use [card-mod](https://github.com/thomasloven/lovelace-card-mod) or theme variables:
 
 ```yaml
 type: custom:streakhub-card
@@ -138,41 +230,30 @@ card_mod:
     }
 ```
 
-Available variables:
-- `--streakhub-trophy-size` - Trophy size in standard mode (default: 80px)
-- `--streakhub-trophy-size-compact` - Trophy size in compact mode (default: 24px)
-- `--streakhub-gold` - Gold trophy color
-- `--streakhub-silver` - Silver trophy color
-- `--streakhub-bronze` - Bronze trophy color
-- `--streakhub-neutral` - Medal color for rank 4+
-- `--streakhub-padding` - Card padding
+#### Available CSS Variables
 
-## Requirements
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--streakhub-trophy-size` | `80px` | Trophy size in standard variant |
+| `--streakhub-trophy-size-compact` | `24px` | Trophy size in compact variant |
+| `--streakhub-gold` | `#FFD700` | Gold trophy color (rank 1) |
+| `--streakhub-silver` | `#C0C0C0` | Silver trophy color (rank 2) |
+| `--streakhub-bronze` | `#CD7F32` | Bronze trophy color (rank 3) |
+| `--streakhub-neutral` | `var(--secondary-text-color)` | Medal color (rank 4+) |
+| `--streakhub-padding` | (theme default) | Card padding |
 
-- Home Assistant 2024.1 or newer
-- [StreakHub Integration](https://github.com/your-repo/streakhub) installed and configured
+## Localization
 
-## Development
+The card supports English and German. The language is determined by:
 
-```bash
-# Install dependencies
-npm install
-
-# Build for development (with sourcemaps)
-npm run watch
-
-# Build for production
-npm run build
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
-```
+1. **Card configuration** (`language: en` or `language: de`)
+2. **Home Assistant user settings** (auto-detected)
+3. **Fallback**: English
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-This project uses [Lit](https://lit.dev/) which is licensed under BSD 3-Clause.
+This project uses:
+- [Lit](https://lit.dev/) - BSD 3-Clause License
+- [Material Design Icons](https://materialdesignicons.com/) - Apache 2.0 License
