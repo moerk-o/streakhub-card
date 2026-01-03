@@ -256,7 +256,7 @@ export class StreakHubCardEditor extends LitElement {
    * Check if an action is set to reset-flow
    */
   private _isResetFlow(action: ActionConfig | undefined): boolean {
-    return action?.action === 'none' || action?.action === 'reset-flow';
+    return action?.action === 'reset-flow';
   }
 
   /**
@@ -307,8 +307,8 @@ export class StreakHubCardEditor extends LitElement {
     const config = { ...this._config } as StreakHubCardConfig;
 
     if (enabled) {
-      // Set to reset-flow (we use 'none' internally, card handles it)
-      config[actionKey] = { action: 'none' };
+      // Set to reset-flow (our custom action type)
+      config[actionKey] = { action: 'reset-flow' };
     } else {
       // Set to more-info as default when disabling reset-flow
       config[actionKey] = { action: 'more-info' };
