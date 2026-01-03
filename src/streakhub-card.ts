@@ -260,9 +260,19 @@ export class StreakHubCard extends LitElement {
 
   /**
    * Handle hold action
+   * Note: If hold_action is 'none' or not set, we open the reset flow
+   * This allows users to configure custom hold actions in the editor
+   * while defaulting to the built-in reset flow
    */
   private _handleHold(): void {
-    const action = this._config?.hold_action ?? DEFAULT_CONFIG.hold_action;
+    const action = this._config?.hold_action;
+
+    // If no action configured or action is 'none', use built-in reset flow
+    if (!action || action.action === 'none' || action.action === 'reset-flow') {
+      this._openResetFlow();
+      return;
+    }
+
     this._executeAction(action);
   }
 
@@ -289,7 +299,7 @@ export class StreakHubCard extends LitElement {
     }
 
     if (this.hass && this._config?.entity) {
-      handleAction(this.hass, action, this._config.entity);
+      handleAction(this, this.hass, action, this._config.entity);
     }
   }
 

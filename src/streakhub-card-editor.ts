@@ -1,39 +1,167 @@
 /**
  * Configuration editor for StreakHub Card
+ *
+ * Uses ha-form with schema/selectors for native HA look and feel
  */
 
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { mdiGestureTap } from '@mdi/js';
 import type {
   HomeAssistant,
   StreakHubCardConfig,
-  ActionConfig,
   CardVariant,
   SupportedLanguage,
 } from './types';
 
-// Action options for dropdowns
-const ACTION_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'more-info', label: 'More Info' },
-  { value: 'reset-flow', label: 'Reset Flow' },
-  { value: 'none', label: 'None' },
-  { value: 'navigate', label: 'Navigate' },
-  { value: 'url', label: 'Open URL' },
-  { value: 'call-service', label: 'Call Service' },
-];
+// =============================================================================
+// Schema Types (matching Home Assistant's ha-form)
+// =============================================================================
 
-// Variant options
-const VARIANT_OPTIONS: Array<{ value: CardVariant; label: string }> = [
-  { value: 'standard', label: 'Standard' },
-  { value: 'compact', label: 'Compact' },
-];
+interface HaFormSchema {
+  name: string;
+  selector?: Record<string, unknown>;
+  type?: string;
+  flatten?: boolean;
+  iconPath?: string;
+  schema?: HaFormSchema[];
+  default?: unknown;
+}
 
-// Language options
-const LANGUAGE_OPTIONS: Array<{ value: SupportedLanguage; label: string }> = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'en', label: 'English' },
-  { value: 'de', label: 'Deutsch' },
-];
+// =============================================================================
+// Action Schema Helpers
+// =============================================================================
+
+/**
+ * Create an action selector schema entry
+ * Uses ui_action selector with custom actions for reset-flow
+ */
+function createActionSchema(
+  name: string,
+  defaultAction: string
+): HaFormSchema {
+  return {
+    name,
+    selector: {
+      ui_action: {
+        default_action: defaultAction,
+        actions: [
+          'more-info',
+          'toggle',
+          'navigate',
+          'url',
+          'call-service',
+          'assist',
+          'none',
+        ],
+      },
+    },
+  };
+}
+
+// =============================================================================
+// Form Schema Definition
+// =============================================================================
+
+/**
+ * Build the complete form schema
+ */
+function buildSchema(): HaFormSchema[] {
+  return [
+    // Entity selector
+    {
+      name: 'entity',
+      selector: {
+        entity: {
+          filter: [{ integration: 'streakhub' }],
+        },
+      },
+    },
+    // Name override
+    {
+      name: 'name',
+      selector: { text: {} },
+    },
+    // Variant selector
+    {
+      name: 'variant',
+      selector: {
+        select: {
+          mode: 'dropdown',
+          options: [
+            { value: 'standard', label: 'Standard' },
+            { value: 'compact', label: 'Compact' },
+          ],
+        },
+      },
+    },
+    // Language selector
+    {
+      name: 'language',
+      selector: {
+        select: {
+          mode: 'dropdown',
+          options: [
+            { value: 'auto', label: 'Auto' },
+            { value: 'en', label: 'English' },
+            { value: 'de', label: 'Deutsch' },
+          ],
+        },
+      },
+    },
+    // Borderless toggle
+    {
+      name: 'borderless',
+      selector: { boolean: {} },
+    },
+    // Visibility section (expandable)
+    {
+      name: 'show',
+      type: 'expandable',
+      flatten: true,
+      iconPath:
+        'M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z',
+      schema: [
+        { name: 'trophy', selector: { boolean: {} }, default: true },
+        { name: 'rank', selector: { boolean: {} }, default: true },
+        { name: 'days', selector: { boolean: {} }, default: true },
+        { name: 'name', selector: { boolean: {} }, default: true },
+      ],
+    },
+    // Actions section (expandable)
+    {
+      name: 'interactions',
+      type: 'expandable',
+      flatten: true,
+      iconPath: mdiGestureTap,
+      schema: [
+        createActionSchema('tap_action', 'more-info'),
+        createActionSchema('hold_action', 'none'),
+        createActionSchema('double_tap_action', 'none'),
+      ],
+    },
+  ];
+}
+
+// =============================================================================
+// Labels for form fields
+// =============================================================================
+
+const LABELS: Record<string, string> = {
+  entity: 'Entity',
+  name: 'Name (optional)',
+  variant: 'Variant',
+  language: 'Language',
+  borderless: 'Borderless',
+  show: 'Visibility',
+  trophy: 'Trophy/Medal',
+  rank: 'Rank (#1, #2, #3)',
+  days: 'Days Counter',
+  interactions: 'Interactions',
+  tap_action: 'Tap action',
+  hold_action: 'Hold action',
+  double_tap_action: 'Double tap action',
+};
 
 /**
  * Visual editor for StreakHub Card configuration
@@ -51,6 +179,8 @@ export class StreakHubCardEditor extends LitElement {
   @state()
   private _helpers?: unknown;
 
+  private _schema = buildSchema();
+
   /**
    * Preload HA elements (entity picker, etc.) using loadCardHelpers
    * This is required because custom cards don't have automatic access to HA components
@@ -58,20 +188,29 @@ export class StreakHubCardEditor extends LitElement {
   private async _loadCardHelpers(): Promise<void> {
     if (this._helpers) return;
 
-    // Check if ha-entity-picker is already available
-    if (window.customElements.get('ha-entity-picker')) {
+    // Check if ha-form is already available
+    if (window.customElements.get('ha-form')) {
       this._helpers = true;
       return;
     }
 
     try {
       // Load card helpers from Home Assistant
-      const helpers = await (window as unknown as { loadCardHelpers: () => Promise<unknown> }).loadCardHelpers();
+      const helpers = await (
+        window as unknown as { loadCardHelpers: () => Promise<unknown> }
+      ).loadCardHelpers();
       this._helpers = helpers;
 
-      // Create a temporary entities card to trigger loading of ha-entity-picker
-      const cardHelpers = helpers as { createCardElement: (config: unknown) => Promise<{ constructor: { getConfigElement: () => Promise<void> } }> };
-      const card = await cardHelpers.createCardElement({ type: 'entities', entities: [] });
+      // Create a temporary entities card to trigger loading of HA components
+      const cardHelpers = helpers as {
+        createCardElement: (
+          config: unknown
+        ) => Promise<{ constructor: { getConfigElement: () => Promise<void> } }>;
+      };
+      const card = await cardHelpers.createCardElement({
+        type: 'entities',
+        entities: [],
+      });
       await card.constructor.getConfigElement();
     } catch (e) {
       // Fallback: helpers not available, but component might still work
@@ -90,69 +229,23 @@ export class StreakHubCardEditor extends LitElement {
       display: block;
     }
 
-    .form {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+    ha-form {
+      display: block;
     }
 
-    .row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .row label {
+    .reset-flow-info {
+      margin: 16px 0;
+      padding: 12px;
+      background: var(--secondary-background-color);
+      border-radius: 8px;
       font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--primary-text-color);
-    }
-
-    .row .hint {
-      font-size: 0.75rem;
       color: var(--secondary-text-color);
     }
 
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-    }
-
-    .toggle-row label {
-      font-size: 0.9rem;
-      color: var(--primary-text-color);
-    }
-
-    .section {
-      border-top: 1px solid var(--divider-color, #e0e0e0);
-      padding-top: 16px;
-      margin-top: 8px;
-    }
-
-    .section-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--secondary-text-color);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-    }
-
-    ha-entity-picker {
-      display: block;
-      width: 100%;
-    }
-
-    ha-textfield {
-      display: block;
-      width: 100%;
-    }
-
-    ha-select {
-      display: block;
-      width: 100%;
+    .reset-flow-info ha-icon {
+      --mdc-icon-size: 18px;
+      margin-right: 8px;
+      color: var(--primary-color);
     }
   `;
 
@@ -164,14 +257,25 @@ export class StreakHubCardEditor extends LitElement {
   }
 
   /**
-   * Fire a config-changed event
+   * Compute label for form fields
    */
-  private _fireConfigChanged(): void {
-    if (!this._config) return;
+  private _computeLabel = (schema: HaFormSchema): string => {
+    return LABELS[schema.name] ?? schema.name;
+  };
+
+  /**
+   * Handle value changes from ha-form
+   */
+  private _valueChanged(ev: CustomEvent): void {
+    const config = ev.detail.value as StreakHubCardConfig;
+
+    // Handle special case: reset-flow action
+    // Since ui_action doesn't include reset-flow, we need to handle it separately
+    // For now, hold_action defaults to reset-flow internally
 
     this.dispatchEvent(
       new CustomEvent('config-changed', {
-        detail: { config: this._config },
+        detail: { config },
         bubbles: true,
         composed: true,
       })
@@ -179,317 +283,27 @@ export class StreakHubCardEditor extends LitElement {
   }
 
   /**
-   * Update a simple config value
+   * Get data for ha-form with defaults applied
    */
-  private _updateConfig<K extends keyof StreakHubCardConfig>(
-    key: K,
-    value: StreakHubCardConfig[K]
-  ): void {
-    if (!this._config) return;
+  private _getData(): Record<string, unknown> {
+    if (!this._config) return {};
 
-    this._config = {
-      ...this._config,
-      [key]: value,
-    };
-    this._fireConfigChanged();
-  }
-
-  /**
-   * Update a show config value
-   */
-  private _updateShowConfig(
-    key: keyof NonNullable<StreakHubCardConfig['show']>,
-    value: boolean
-  ): void {
-    if (!this._config) return;
-
-    this._config = {
-      ...this._config,
+    return {
+      entity: this._config.entity ?? '',
+      name: this._config.name ?? '',
+      variant: this._config.variant ?? 'standard',
+      language: this._config.language ?? 'auto',
+      borderless: this._config.borderless ?? false,
       show: {
-        ...this._config.show,
-        [key]: value,
+        trophy: this._config.show?.trophy ?? true,
+        rank: this._config.show?.rank ?? true,
+        days: this._config.show?.days ?? true,
+        name: this._config.show?.name ?? true,
       },
+      tap_action: this._config.tap_action ?? { action: 'more-info' },
+      hold_action: this._config.hold_action ?? { action: 'none' },
+      double_tap_action: this._config.double_tap_action ?? { action: 'none' },
     };
-    this._fireConfigChanged();
-  }
-
-  /**
-   * Update an action config
-   */
-  private _updateActionConfig(
-    key: 'tap_action' | 'hold_action' | 'double_tap_action',
-    action: string
-  ): void {
-    if (!this._config) return;
-
-    this._config = {
-      ...this._config,
-      [key]: { action } as ActionConfig,
-    };
-    this._fireConfigChanged();
-  }
-
-  /**
-   * Handle entity picker change
-   */
-  private _handleEntityChange(e: CustomEvent): void {
-    const value = (e.target as HTMLInputElement).value;
-    this._updateConfig('entity', value);
-  }
-
-  /**
-   * Handle text input change
-   */
-  private _handleNameChange(e: Event): void {
-    const value = (e.target as HTMLInputElement).value;
-    this._updateConfig('name', value || undefined);
-  }
-
-  /**
-   * Handle select change
-   */
-  private _handleSelectChange(
-    key: keyof StreakHubCardConfig,
-    e: CustomEvent
-  ): void {
-    const value = (e.target as HTMLSelectElement).value;
-    this._updateConfig(key, value as StreakHubCardConfig[typeof key]);
-  }
-
-  /**
-   * Handle toggle change
-   */
-  private _handleToggleChange(
-    key: 'borderless',
-    e: CustomEvent
-  ): void {
-    const checked = (e.target as HTMLInputElement).checked;
-    this._updateConfig(key, checked);
-  }
-
-  /**
-   * Handle show toggle change
-   */
-  private _handleShowToggleChange(
-    key: keyof NonNullable<StreakHubCardConfig['show']>,
-    e: CustomEvent
-  ): void {
-    const checked = (e.target as HTMLInputElement).checked;
-    this._updateShowConfig(key, checked);
-  }
-
-  /**
-   * Handle action select change
-   */
-  private _handleActionChange(
-    key: 'tap_action' | 'hold_action' | 'double_tap_action',
-    e: CustomEvent
-  ): void {
-    const value = (e.target as HTMLSelectElement).value;
-    this._updateActionConfig(key, value);
-  }
-
-  /**
-   * Entity filter function for ha-entity-picker
-   */
-  private _entityFilter = (entity: { entity_id: string }): boolean => {
-    if (!this.hass) return false;
-    const stateObj = this.hass.states[entity.entity_id];
-    return Array.isArray(stateObj?.attributes?.top_3);
-  };
-
-  /**
-   * Render entity picker
-   */
-  private _renderEntityPicker() {
-    return html`
-      <div class="row">
-        <label>Entity</label>
-        <ha-entity-picker
-          .hass=${this.hass}
-          .value=${this._config?.entity ?? ''}
-          .includeDomains=${['sensor']}
-          .entityFilter=${this._entityFilter}
-          @value-changed=${this._handleEntityChange}
-          allow-custom-entity
-        ></ha-entity-picker>
-        <span class="hint">Select a StreakHub rank sensor</span>
-      </div>
-    `;
-  }
-
-  /**
-   * Render name input
-   */
-  private _renderNameInput() {
-    return html`
-      <div class="row">
-        <label>Name (optional)</label>
-        <ha-textfield
-          .value=${this._config?.name ?? ''}
-          @input=${this._handleNameChange}
-          placeholder="Override device name"
-        ></ha-textfield>
-      </div>
-    `;
-  }
-
-  /**
-   * Render variant selector
-   */
-  private _renderVariantSelect() {
-    return html`
-      <div class="row">
-        <label>Variant</label>
-        <ha-select
-          .value=${this._config?.variant ?? 'standard'}
-          @selected=${(e: CustomEvent) =>
-            this._handleSelectChange('variant', e)}
-          @closed=${(e: Event) => e.stopPropagation()}
-        >
-          ${VARIANT_OPTIONS.map(
-            (opt) => html`
-              <mwc-list-item .value=${opt.value}>${opt.label}</mwc-list-item>
-            `
-          )}
-        </ha-select>
-      </div>
-    `;
-  }
-
-  /**
-   * Render language selector
-   */
-  private _renderLanguageSelect() {
-    return html`
-      <div class="row">
-        <label>Language</label>
-        <ha-select
-          .value=${this._config?.language ?? 'auto'}
-          @selected=${(e: CustomEvent) =>
-            this._handleSelectChange('language', e)}
-          @closed=${(e: Event) => e.stopPropagation()}
-        >
-          ${LANGUAGE_OPTIONS.map(
-            (opt) => html`
-              <mwc-list-item .value=${opt.value}>${opt.label}</mwc-list-item>
-            `
-          )}
-        </ha-select>
-      </div>
-    `;
-  }
-
-  /**
-   * Render borderless toggle
-   */
-  private _renderBorderlessToggle() {
-    return html`
-      <div class="toggle-row">
-        <label>Borderless</label>
-        <ha-switch
-          .checked=${this._config?.borderless ?? false}
-          @change=${(e: CustomEvent) =>
-            this._handleToggleChange('borderless', e)}
-        ></ha-switch>
-      </div>
-    `;
-  }
-
-  /**
-   * Render show toggles
-   */
-  private _renderShowToggles() {
-    const showConfig = this._config?.show ?? {};
-
-    return html`
-      <div class="section">
-        <div class="section-title">Visibility</div>
-
-        <div class="toggle-row">
-          <label>Trophy/Medal</label>
-          <ha-switch
-            .checked=${showConfig.trophy ?? true}
-            @change=${(e: CustomEvent) =>
-              this._handleShowToggleChange('trophy', e)}
-          ></ha-switch>
-        </div>
-
-        <div class="toggle-row">
-          <label>Rank (#1, #2, #3)</label>
-          <ha-switch
-            .checked=${showConfig.rank ?? true}
-            @change=${(e: CustomEvent) =>
-              this._handleShowToggleChange('rank', e)}
-          ></ha-switch>
-        </div>
-
-        <div class="toggle-row">
-          <label>Days Counter</label>
-          <ha-switch
-            .checked=${showConfig.days ?? true}
-            @change=${(e: CustomEvent) =>
-              this._handleShowToggleChange('days', e)}
-          ></ha-switch>
-        </div>
-
-        <div class="toggle-row">
-          <label>Name</label>
-          <ha-switch
-            .checked=${showConfig.name ?? true}
-            @change=${(e: CustomEvent) =>
-              this._handleShowToggleChange('name', e)}
-          ></ha-switch>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Render action selector
-   */
-  private _renderActionSelect(
-    label: string,
-    key: 'tap_action' | 'hold_action' | 'double_tap_action',
-    defaultAction: string
-  ) {
-    const config = this._config?.[key] as ActionConfig | undefined;
-    const currentAction = config?.action ?? defaultAction;
-
-    return html`
-      <div class="row">
-        <label>${label}</label>
-        <ha-select
-          .value=${currentAction}
-          @selected=${(e: CustomEvent) => this._handleActionChange(key, e)}
-          @closed=${(e: Event) => e.stopPropagation()}
-        >
-          ${ACTION_OPTIONS.map(
-            (opt) => html`
-              <mwc-list-item .value=${opt.value}>${opt.label}</mwc-list-item>
-            `
-          )}
-        </ha-select>
-      </div>
-    `;
-  }
-
-  /**
-   * Render action configuration section
-   */
-  private _renderActions() {
-    return html`
-      <div class="section">
-        <div class="section-title">Actions</div>
-        ${this._renderActionSelect('Tap Action', 'tap_action', 'more-info')}
-        ${this._renderActionSelect('Hold Action', 'hold_action', 'reset-flow')}
-        ${this._renderActionSelect(
-          'Double Tap Action',
-          'double_tap_action',
-          'none'
-        )}
-      </div>
-    `;
   }
 
   protected override render() {
@@ -497,20 +311,25 @@ export class StreakHubCardEditor extends LitElement {
       return nothing;
     }
 
-    // Wait for helpers to load before rendering entity picker
+    // Wait for helpers to load before rendering
     if (!this._helpers) {
       return html`<div>Loading...</div>`;
     }
 
     return html`
-      <div class="form">
-        ${this._renderEntityPicker()}
-        ${this._renderNameInput()}
-        ${this._renderVariantSelect()}
-        ${this._renderLanguageSelect()}
-        ${this._renderBorderlessToggle()}
-        ${this._renderShowToggles()}
-        ${this._renderActions()}
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._getData()}
+        .schema=${this._schema}
+        .computeLabel=${this._computeLabel}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+      <div class="reset-flow-info">
+        <ha-icon icon="mdi:information-outline"></ha-icon>
+        <span
+          >Tip: Set "Hold action" to "None" to use the built-in streak reset
+          flow on long press.</span
+        >
       </div>
     `;
   }

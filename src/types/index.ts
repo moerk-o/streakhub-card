@@ -87,7 +87,6 @@ export type ActionType =
   | 'more-info'
   | 'none'
   | 'navigate'
-  | 'url'
   | 'call-service'
   | 'reset-flow';
 
@@ -95,8 +94,6 @@ export interface ActionConfig {
   action: ActionType;
   /** Navigation path for 'navigate' action */
   navigation_path?: string;
-  /** URL for 'url' action */
-  url_path?: string;
   /** Service name for 'call-service' action (e.g., "light.turn_on") */
   service?: string;
   /** Service data for 'call-service' action */

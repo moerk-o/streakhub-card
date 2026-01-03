@@ -11,29 +11,25 @@ import type { ActionConfig, HomeAssistant } from '../types';
 /**
  * Handle a card action based on configuration
  *
+ * @param element The element dispatching the event (needed for more-info)
  * @param hass Home Assistant instance
  * @param config Action configuration
  * @param entityId Entity ID for more-info action
  */
 export function handleAction(
+  element: HTMLElement,
   hass: HomeAssistant,
   config: ActionConfig,
   entityId: string
 ): void {
   switch (config.action) {
     case 'more-info':
-      fireMoreInfoEvent(entityId);
+      fireMoreInfoEvent(element, entityId);
       break;
 
     case 'navigate':
       if (config.navigation_path) {
         navigateTo(config.navigation_path);
-      }
-      break;
-
-    case 'url':
-      if (config.url_path) {
-        openUrl(config.url_path);
       }
       break;
 
@@ -56,14 +52,15 @@ export function handleAction(
 
 /**
  * Fire a more-info event to open the entity details dialog
+ * Must be dispatched from an element within the HA DOM tree
  */
-function fireMoreInfoEvent(entityId: string): void {
+function fireMoreInfoEvent(element: HTMLElement, entityId: string): void {
   const event = new CustomEvent('hass-more-info', {
     detail: { entityId },
     bubbles: true,
     composed: true,
   });
-  document.body.dispatchEvent(event);
+  element.dispatchEvent(event);
 }
 
 // =============================================================================
@@ -80,13 +77,6 @@ function navigateTo(path: string): void {
     composed: true,
   });
   window.dispatchEvent(event);
-}
-
-/**
- * Open an external URL
- */
-function openUrl(url: string): void {
-  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // =============================================================================
