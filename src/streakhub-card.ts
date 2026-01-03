@@ -260,15 +260,18 @@ export class StreakHubCard extends LitElement {
 
   /**
    * Handle hold action
-   * Note: If hold_action is 'none' or not set, we open the reset flow
-   * This allows users to configure custom hold actions in the editor
-   * while defaulting to the built-in reset flow
+   * Default: open reset flow if not configured
    */
   private _handleHold(): void {
-    const action = this._config?.hold_action;
+    const action = this._config?.hold_action ?? DEFAULT_CONFIG.hold_action;
 
-    // If no action configured or action is 'none', use built-in reset flow
-    if (!action || action.action === 'none' || action.action === 'reset-flow') {
+    // 'none' means explicitly disabled - do nothing
+    if (action.action === 'none') {
+      return;
+    }
+
+    // 'reset-flow' opens the built-in reset dialog
+    if (action.action === 'reset-flow') {
       this._openResetFlow();
       return;
     }
@@ -361,7 +364,7 @@ export class StreakHubCard extends LitElement {
    */
   private _renderError(message: string, entityId?: string) {
     return html`
-      <ha-card class="error">
+      <ha-card>
         <div class="error-content">
           <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
           <span class="message">${message}</span>

@@ -222,68 +222,6 @@ export const cardStyles = css`
     color: var(--primary-text-color);
   }
 
-  /* ==========================================================================
-     Backdrop (for closing expansion on outside click)
-     ========================================================================== */
-
-  .backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-  }
-
-  .expansion {
-    z-index: 2;
-  }
-`;
-
-export const trophyStyles = css`
-  /* ==========================================================================
-     Trophy Icon Component
-     ========================================================================== */
-
-  :host {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  ha-icon {
-    display: block;
-  }
-
-  /* Gold trophy */
-  :host([rank='1']) ha-icon {
-    color: var(--streakhub-gold, #ffd700);
-  }
-
-  /* Silver trophy */
-  :host([rank='2']) ha-icon {
-    color: var(--streakhub-silver, #c0c0c0);
-  }
-
-  /* Bronze trophy */
-  :host([rank='3']) ha-icon {
-    color: var(--streakhub-bronze, #cd7f32);
-  }
-
-  /* Neutral medal (rank 4+) */
-  :host(:not([rank='1']):not([rank='2']):not([rank='3'])) ha-icon {
-    color: var(--streakhub-neutral, var(--secondary-text-color, #888));
-  }
-
-  /* Standard size */
-  :host([variant='standard']) ha-icon {
-    --mdc-icon-size: var(--streakhub-trophy-size, 80px);
-  }
-
-  /* Compact size */
-  :host([variant='compact']) ha-icon {
-    --mdc-icon-size: var(--streakhub-trophy-size-compact, 24px);
-  }
 `;
 
 export const resetFlowStyles = css`
