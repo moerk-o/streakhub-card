@@ -175,6 +175,24 @@ export interface Translations {
   close: string;
 }
 
+export interface EditorTranslations {
+  entity: string;
+  name: string;
+  variant: string;
+  language: string;
+  borderless: string;
+  show: string;
+  trophy: string;
+  rank: string;
+  days_counter: string;
+  interactions: string;
+  tap_action: string;
+  hold_action: string;
+  double_tap_action: string;
+  reset_flow: string;
+  reset_flow_description: string;
+}
+
 // =============================================================================
 // Card Sizing Types (Home Assistant)
 // =============================================================================

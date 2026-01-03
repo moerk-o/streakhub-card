@@ -2,7 +2,12 @@
  * Internationalization utilities for StreakHub Card
  */
 
-import type { Translations, HomeAssistant, SupportedLanguage } from '../types';
+import type {
+  Translations,
+  EditorTranslations,
+  HomeAssistant,
+  SupportedLanguage,
+} from '../types';
 
 // =============================================================================
 // Translation Definitions
@@ -38,6 +43,43 @@ const TRANSLATIONS: Record<'en' | 'de', Translations> = {
     invalid_data: 'Ungültige Entity-Daten',
     unavailable: 'Nicht verfügbar',
     close: 'Schließen',
+  },
+};
+
+const EDITOR_TRANSLATIONS: Record<'en' | 'de', EditorTranslations> = {
+  en: {
+    entity: 'Entity',
+    name: 'Name (optional)',
+    variant: 'Variant',
+    language: 'Language',
+    borderless: 'Borderless',
+    show: 'Visibility',
+    trophy: 'Trophy/Medal',
+    rank: 'Rank (#1, #2, #3)',
+    days_counter: 'Days Counter',
+    interactions: 'Interactions',
+    tap_action: 'Tap',
+    hold_action: 'Hold',
+    double_tap_action: 'Double tap',
+    reset_flow: 'Reset flow',
+    reset_flow_description: 'Opens streak reset dialog',
+  },
+  de: {
+    entity: 'Entität',
+    name: 'Name (optional)',
+    variant: 'Variante',
+    language: 'Sprache',
+    borderless: 'Rahmenlos',
+    show: 'Sichtbarkeit',
+    trophy: 'Pokal/Medaille',
+    rank: 'Rang (#1, #2, #3)',
+    days_counter: 'Tage-Zähler',
+    interactions: 'Interaktionen',
+    tap_action: 'Tippen',
+    hold_action: 'Gedrückt halten',
+    double_tap_action: 'Doppeltippen',
+    reset_flow: 'Reset-Ablauf',
+    reset_flow_description: 'Öffnet den Streak-Reset-Dialog',
   },
 };
 
@@ -89,6 +131,19 @@ export function getTranslations(
 
   // 3. Fallback to English
   return TRANSLATIONS.en;
+}
+
+/**
+ * Get editor translations based on Home Assistant settings
+ */
+export function getEditorTranslations(
+  hass: HomeAssistant | undefined
+): EditorTranslations {
+  const hassLang = getHassLanguage(hass);
+  if (hassLang && isSupportedLanguage(hassLang)) {
+    return EDITOR_TRANSLATIONS[hassLang];
+  }
+  return EDITOR_TRANSLATIONS.en;
 }
 
 /**

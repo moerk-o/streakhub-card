@@ -1,7 +1,9 @@
 /**
  * Configuration editor for StreakHub Card
  *
- * Uses ha-form with schema/selectors for native HA look and feel
+ * Uses ha-form with schema/selectors for native HA look and feel.
+ * Actions use a toggle to switch between "Reset flow" (our custom action)
+ * and standard HA actions via ui_action selector.
  */
 
 import { LitElement, html, css, nothing } from 'lit';
@@ -10,9 +12,10 @@ import { mdiGestureTap } from '@mdi/js';
 import type {
   HomeAssistant,
   StreakHubCardConfig,
-  CardVariant,
-  SupportedLanguage,
+  ActionConfig,
+  EditorTranslations,
 } from './types';
+import { getEditorTranslations } from './utils/translations';
 
 // =============================================================================
 // Schema Types (matching Home Assistant's ha-form)
@@ -29,44 +32,10 @@ interface HaFormSchema {
 }
 
 // =============================================================================
-// Action Schema Helpers
+// Form Schema Definition (basic settings only, actions are separate)
 // =============================================================================
 
-/**
- * Create an action selector schema entry
- * Uses ui_action selector with custom actions for reset-flow
- */
-function createActionSchema(
-  name: string,
-  defaultAction: string
-): HaFormSchema {
-  return {
-    name,
-    selector: {
-      ui_action: {
-        default_action: defaultAction,
-        actions: [
-          'more-info',
-          'toggle',
-          'navigate',
-          'url',
-          'call-service',
-          'assist',
-          'none',
-        ],
-      },
-    },
-  };
-}
-
-// =============================================================================
-// Form Schema Definition
-// =============================================================================
-
-/**
- * Build the complete form schema
- */
-function buildSchema(): HaFormSchema[] {
+function buildBasicSchema(): HaFormSchema[] {
   return [
     // Entity selector
     {
@@ -115,7 +84,6 @@ function buildSchema(): HaFormSchema[] {
       selector: { boolean: {} },
     },
     // Visibility section (expandable)
-    // Note: flatten is NOT set here, so the values stay nested under 'show'
     {
       name: 'show',
       type: 'expandable',
@@ -128,40 +96,18 @@ function buildSchema(): HaFormSchema[] {
         { name: 'name', selector: { boolean: {} }, default: true },
       ],
     },
-    // Actions section (expandable)
-    {
-      name: 'interactions',
-      type: 'expandable',
-      flatten: true,
-      iconPath: mdiGestureTap,
-      schema: [
-        createActionSchema('tap_action', 'more-info'),
-        createActionSchema('hold_action', 'none'),
-        createActionSchema('double_tap_action', 'none'),
-      ],
-    },
   ];
 }
 
-// =============================================================================
-// Labels for form fields
-// =============================================================================
-
-const LABELS: Record<string, string> = {
-  entity: 'Entity',
-  name: 'Name (optional)',
-  variant: 'Variant',
-  language: 'Language',
-  borderless: 'Borderless',
-  show: 'Visibility',
-  trophy: 'Trophy/Medal',
-  rank: 'Rank (#1, #2, #3)',
-  days: 'Days Counter',
-  interactions: 'Interactions',
-  tap_action: 'Tap action',
-  hold_action: 'Hold action',
-  double_tap_action: 'Double tap action',
-};
+// Schema for single action (used when reset-flow toggle is off)
+const ACTION_SCHEMA: HaFormSchema[] = [
+  {
+    name: 'action',
+    selector: {
+      ui_action: {},
+    },
+  },
+];
 
 /**
  * Visual editor for StreakHub Card configuration
@@ -179,29 +125,25 @@ export class StreakHubCardEditor extends LitElement {
   @state()
   private _helpers?: unknown;
 
-  private _schema = buildSchema();
+  private _basicSchema = buildBasicSchema();
 
   /**
    * Preload HA elements (entity picker, etc.) using loadCardHelpers
-   * This is required because custom cards don't have automatic access to HA components
    */
   private async _loadCardHelpers(): Promise<void> {
     if (this._helpers) return;
 
-    // Check if ha-form is already available
     if (window.customElements.get('ha-form')) {
       this._helpers = true;
       return;
     }
 
     try {
-      // Load card helpers from Home Assistant
       const helpers = await (
         window as unknown as { loadCardHelpers: () => Promise<unknown> }
       ).loadCardHelpers();
       this._helpers = helpers;
 
-      // Create a temporary entities card to trigger loading of HA components
       const cardHelpers = helpers as {
         createCardElement: (
           config: unknown
@@ -213,7 +155,6 @@ export class StreakHubCardEditor extends LitElement {
       });
       await card.constructor.getConfigElement();
     } catch (e) {
-      // Fallback: helpers not available, but component might still work
       console.warn('StreakHub Card: Could not load card helpers', e);
       this._helpers = true;
     }
@@ -233,49 +174,163 @@ export class StreakHubCardEditor extends LitElement {
       display: block;
     }
 
-    .reset-flow-info {
-      margin: 16px 0;
+    ha-expansion-panel {
+      margin-top: 8px;
+    }
+
+    ha-expansion-panel [slot='header'] {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    ha-expansion-panel .content {
       padding: 12px;
-      background: var(--secondary-background-color);
-      border-radius: 8px;
-      font-size: 0.9rem;
+    }
+
+    ha-svg-icon {
       color: var(--secondary-text-color);
     }
 
-    .reset-flow-info ha-icon {
-      --mdc-icon-size: 18px;
-      margin-right: 8px;
-      color: var(--primary-color);
+    .action-row {
+      margin-bottom: 16px;
+    }
+
+    .action-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .action-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .action-label {
+      font-weight: 500;
+    }
+
+    .reset-flow-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+      color: var(--secondary-text-color);
+    }
+
+    .action-config {
+      margin-top: 8px;
+    }
+
+    .reset-flow-active {
+      padding: 12px;
+      background: var(--primary-color);
+      color: var(--text-primary-color);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reset-flow-active ha-icon {
+      --mdc-icon-size: 20px;
     }
   `;
 
-  /**
-   * Set the configuration from the card
-   */
   setConfig(config: StreakHubCardConfig): void {
     this._config = config;
   }
 
   /**
-   * Compute label for form fields
+   * Get translations for current language
    */
+  private get _translations(): EditorTranslations {
+    return getEditorTranslations(this.hass);
+  }
+
+  /**
+   * Check if an action is set to reset-flow
+   */
+  private _isResetFlow(action: ActionConfig | undefined): boolean {
+    return action?.action === 'none' || action?.action === 'reset-flow';
+  }
+
+  /**
+   * Build label map based on current translations
+   */
+  private _getLabelMap(): Record<string, string> {
+    const t = this._translations;
+    return {
+      entity: t.entity,
+      name: t.name,
+      variant: t.variant,
+      language: t.language,
+      borderless: t.borderless,
+      show: t.show,
+      trophy: t.trophy,
+      rank: t.rank,
+      days: t.days_counter,
+      action: '', // Empty label for nested action selector
+    };
+  }
+
   private _computeLabel = (schema: HaFormSchema): string => {
-    return LABELS[schema.name] ?? schema.name;
+    const labels = this._getLabelMap();
+    return labels[schema.name] ?? schema.name;
   };
 
   /**
-   * Handle value changes from ha-form
+   * Handle basic form value changes
    */
   private _valueChanged(ev: CustomEvent): void {
     const formData = ev.detail.value as Record<string, unknown>;
 
-    // Merge form data with existing config to preserve 'type' and other fields
     const config: StreakHubCardConfig = {
       ...this._config,
       ...formData,
     } as StreakHubCardConfig;
 
-    // Update internal state
+    this._updateConfig(config);
+  }
+
+  /**
+   * Handle reset-flow toggle change
+   */
+  private _handleResetFlowToggle(
+    actionKey: 'tap_action' | 'hold_action' | 'double_tap_action',
+    enabled: boolean
+  ): void {
+    const config = { ...this._config } as StreakHubCardConfig;
+
+    if (enabled) {
+      // Set to reset-flow (we use 'none' internally, card handles it)
+      config[actionKey] = { action: 'none' };
+    } else {
+      // Set to more-info as default when disabling reset-flow
+      config[actionKey] = { action: 'more-info' };
+    }
+
+    this._updateConfig(config);
+  }
+
+  /**
+   * Handle action config change from ui_action selector
+   */
+  private _handleActionChange(
+    actionKey: 'tap_action' | 'hold_action' | 'double_tap_action',
+    ev: CustomEvent
+  ): void {
+    ev.stopPropagation();
+    const formData = ev.detail.value as { action: ActionConfig };
+
+    const config = { ...this._config } as StreakHubCardConfig;
+    config[actionKey] = formData.action;
+
+    this._updateConfig(config);
+  }
+
+  private _updateConfig(config: StreakHubCardConfig): void {
     this._config = config;
 
     this.dispatchEvent(
@@ -287,10 +342,7 @@ export class StreakHubCardEditor extends LitElement {
     );
   }
 
-  /**
-   * Get data for ha-form with defaults applied
-   */
-  private _getData(): Record<string, unknown> {
+  private _getBasicData(): Record<string, unknown> {
     if (!this._config) return {};
 
     return {
@@ -305,10 +357,58 @@ export class StreakHubCardEditor extends LitElement {
         days: this._config.show?.days ?? true,
         name: this._config.show?.name ?? true,
       },
-      tap_action: this._config.tap_action ?? { action: 'more-info' },
-      hold_action: this._config.hold_action ?? { action: 'none' },
-      double_tap_action: this._config.double_tap_action ?? { action: 'none' },
     };
+  }
+
+  /**
+   * Render a single action editor row
+   */
+  private _renderActionRow(
+    actionKey: 'tap_action' | 'hold_action' | 'double_tap_action',
+    label: string,
+    defaultResetFlow: boolean
+  ) {
+    const action = this._config?.[actionKey];
+    const isResetFlow = action ? this._isResetFlow(action) : defaultResetFlow;
+    const t = this._translations;
+
+    return html`
+      <div class="action-row">
+        <div class="action-header">
+          <span class="action-label">${label}</span>
+          <div class="reset-flow-toggle">
+            <span>${t.reset_flow}</span>
+            <ha-switch
+              .checked=${isResetFlow}
+              @change=${(e: Event) =>
+                this._handleResetFlowToggle(
+                  actionKey,
+                  (e.target as HTMLInputElement).checked
+                )}
+            ></ha-switch>
+          </div>
+        </div>
+        ${isResetFlow
+          ? html`
+              <div class="reset-flow-active">
+                <ha-icon icon="mdi:gesture-tap-hold"></ha-icon>
+                <span>${t.reset_flow_description}</span>
+              </div>
+            `
+          : html`
+              <div class="action-config">
+                <ha-form
+                  .hass=${this.hass}
+                  .data=${{ action: action ?? { action: 'more-info' } }}
+                  .schema=${ACTION_SCHEMA}
+                  .computeLabel=${this._computeLabel}
+                  @value-changed=${(ev: CustomEvent) =>
+                    this._handleActionChange(actionKey, ev)}
+                ></ha-form>
+              </div>
+            `}
+      </div>
+    `;
   }
 
   protected override render() {
@@ -316,26 +416,32 @@ export class StreakHubCardEditor extends LitElement {
       return nothing;
     }
 
-    // Wait for helpers to load before rendering
     if (!this._helpers) {
       return html`<div>Loading...</div>`;
     }
 
+    const t = this._translations;
+
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this._getData()}
-        .schema=${this._schema}
+        .data=${this._getBasicData()}
+        .schema=${this._basicSchema}
         .computeLabel=${this._computeLabel}
         @value-changed=${this._valueChanged}
       ></ha-form>
-      <div class="reset-flow-info">
-        <ha-icon icon="mdi:information-outline"></ha-icon>
-        <span
-          >Tip: Set "Hold action" to "None" to use the built-in streak reset
-          flow on long press.</span
-        >
-      </div>
+
+      <ha-expansion-panel outlined>
+        <div slot="header" role="heading" aria-level="3">
+          <ha-svg-icon .path=${mdiGestureTap}></ha-svg-icon>
+          ${t.interactions}
+        </div>
+        <div class="content">
+          ${this._renderActionRow('tap_action', t.tap_action, false)}
+          ${this._renderActionRow('hold_action', t.hold_action, true)}
+          ${this._renderActionRow('double_tap_action', t.double_tap_action, false)}
+        </div>
+      </ha-expansion-panel>
     `;
   }
 }
