@@ -86,11 +86,11 @@ show:
   days: true                    # Show days counter
   name: true                    # Show tracker name
 
-# Actions
+# Actions (defaults shown)
 tap_action:
-  action: more-info
+  action: none
 hold_action:
-  action: reset-flow            # Opens the reset dialog (default for hold)
+  action: reset-flow            # Opens the reset dialog
 double_tap_action:
   action: none
 ```
@@ -103,7 +103,7 @@ double_tap_action:
 | `name` | string | Device name | Custom name to display |
 | `variant` | string | `standard` | Display variant: `standard` or `compact` |
 | `borderless` | boolean | `false` | Hide card border and background |
-| `language` | string | `auto` | Force language: `auto`, `en`, or `de` |
+| `language` | string | `auto` | Force language: `auto`, `en`, or `de` (YAML only) |
 | `show.trophy` | boolean | `true` | Show trophy/medal icon |
 | `show.rank` | boolean | `true` | Show rank indicator (#1, #2, #3) |
 | `show.days` | boolean | `true` | Show days counter |
@@ -115,7 +115,7 @@ Actions can be configured for tap, hold, and double-tap gestures:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `tap_action` | `more-info` | Action on single tap |
+| `tap_action` | `none` | Action on single tap |
 | `hold_action` | `reset-flow` | Action on long press |
 | `double_tap_action` | `none` | Action on double tap |
 
@@ -256,4 +256,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 This project uses:
 - [Lit](https://lit.dev/) - BSD 3-Clause License
-- [Material Design Icons](https://materialdesignicons.com/) - Apache 2.0 License

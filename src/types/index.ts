@@ -179,9 +179,7 @@ export interface EditorTranslations {
   entity: string;
   name: string;
   variant: string;
-  language: string;
   borderless: string;
-  show: string;
   trophy: string;
   rank: string;
   days_counter: string;
@@ -246,7 +244,7 @@ export const DEFAULT_CONFIG: Required<
     days: true,
     name: true,
   },
-  tap_action: { action: 'more-info' },
+  tap_action: { action: 'none' },
   hold_action: { action: 'reset-flow' },
   double_tap_action: { action: 'none' },
   language: 'auto',

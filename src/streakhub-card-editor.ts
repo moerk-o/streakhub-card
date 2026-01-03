@@ -64,40 +64,17 @@ function buildBasicSchema(): HaFormSchema[] {
         },
       },
     },
-    // Language selector
-    {
-      name: 'language',
-      selector: {
-        select: {
-          mode: 'dropdown',
-          options: [
-            { value: 'auto', label: 'Auto' },
-            { value: 'en', label: 'English' },
-            { value: 'de', label: 'Deutsch' },
-          ],
-        },
-      },
-    },
-    // Borderless toggle
-    {
-      name: 'borderless',
-      selector: { boolean: {} },
-    },
-    // Visibility section (expandable)
-    {
-      name: 'show',
-      type: 'expandable',
-      iconPath:
-        'M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z',
-      schema: [
-        { name: 'trophy', selector: { boolean: {} }, default: true },
-        { name: 'rank', selector: { boolean: {} }, default: true },
-        { name: 'days', selector: { boolean: {} }, default: true },
-        { name: 'name', selector: { boolean: {} }, default: true },
-      ],
-    },
   ];
 }
+
+// Visibility options schema (rendered separately in 2-column grid)
+const VISIBILITY_SCHEMA: HaFormSchema[] = [
+  { name: 'show.name', selector: { boolean: {} }, default: true },
+  { name: 'show.trophy', selector: { boolean: {} }, default: true },
+  { name: 'show.rank', selector: { boolean: {} }, default: true },
+  { name: 'show.days', selector: { boolean: {} }, default: true },
+  { name: 'borderless', selector: { boolean: {} }, default: false },
+];
 
 // Schema for single action (used when reset-flow toggle is off)
 // Excludes 'toggle' since it doesn't make sense for streak sensors
@@ -106,7 +83,8 @@ const ACTION_SCHEMA: HaFormSchema[] = [
     name: 'action',
     selector: {
       ui_action: {
-        actions: ['more-info', 'navigate', 'url', 'perform-action', 'assist', 'none'],
+        default_action: 'none',
+        actions: ['more-info', 'navigate', 'url', 'perform-action', 'assist'],
       },
     },
   },
@@ -175,6 +153,17 @@ export class StreakHubCardEditor extends LitElement {
 
     ha-form {
       display: block;
+    }
+
+    .visibility-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 16px;
+      margin-top: 8px;
+    }
+
+    .visibility-grid ha-form {
+      min-width: 0;
     }
 
     ha-expansion-panel {
@@ -268,12 +257,11 @@ export class StreakHubCardEditor extends LitElement {
       entity: t.entity,
       name: t.name,
       variant: t.variant,
-      language: t.language,
       borderless: t.borderless,
-      show: t.show,
-      trophy: t.trophy,
-      rank: t.rank,
-      days: t.days_counter,
+      'show.name': t.name.replace(' (optional)', ''),
+      'show.trophy': t.trophy,
+      'show.rank': t.rank,
+      'show.days': t.days_counter,
       action: '', // Empty label for nested action selector
     };
   }
@@ -292,6 +280,27 @@ export class StreakHubCardEditor extends LitElement {
     const config: StreakHubCardConfig = {
       ...this._config,
       ...formData,
+    } as StreakHubCardConfig;
+
+    this._updateConfig(config);
+  }
+
+  /**
+   * Handle visibility form value changes
+   */
+  private _visibilityChanged(ev: CustomEvent): void {
+    const formData = ev.detail.value as Record<string, unknown>;
+
+    const config: StreakHubCardConfig = {
+      ...this._config,
+      borderless: formData['borderless'] as boolean,
+      show: {
+        ...this._config?.show,
+        name: formData['show.name'] as boolean,
+        trophy: formData['show.trophy'] as boolean,
+        rank: formData['show.rank'] as boolean,
+        days: formData['show.days'] as boolean,
+      },
     } as StreakHubCardConfig;
 
     this._updateConfig(config);
@@ -352,14 +361,18 @@ export class StreakHubCardEditor extends LitElement {
       entity: this._config.entity ?? '',
       name: this._config.name ?? '',
       variant: this._config.variant ?? 'standard',
-      language: this._config.language ?? 'auto',
+    };
+  }
+
+  private _getVisibilityData(): Record<string, unknown> {
+    if (!this._config) return {};
+
+    return {
+      'show.name': this._config.show?.name ?? true,
+      'show.trophy': this._config.show?.trophy ?? true,
+      'show.rank': this._config.show?.rank ?? true,
+      'show.days': this._config.show?.days ?? true,
       borderless: this._config.borderless ?? false,
-      show: {
-        trophy: this._config.show?.trophy ?? true,
-        rank: this._config.show?.rank ?? true,
-        days: this._config.show?.days ?? true,
-        name: this._config.show?.name ?? true,
-      },
     };
   }
 
@@ -402,7 +415,7 @@ export class StreakHubCardEditor extends LitElement {
               <div class="action-config">
                 <ha-form
                   .hass=${this.hass}
-                  .data=${{ action: action ?? { action: 'more-info' } }}
+                  .data=${{ action: action }}
                   .schema=${ACTION_SCHEMA}
                   .computeLabel=${this._computeLabel}
                   @value-changed=${(ev: CustomEvent) =>
@@ -432,6 +445,30 @@ export class StreakHubCardEditor extends LitElement {
         .schema=${this._basicSchema}
         .computeLabel=${this._computeLabel}
         @value-changed=${this._valueChanged}
+      ></ha-form>
+
+      <div class="visibility-grid">
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._getVisibilityData()}
+          .schema=${[VISIBILITY_SCHEMA[0], VISIBILITY_SCHEMA[2]]}
+          .computeLabel=${this._computeLabel}
+          @value-changed=${this._visibilityChanged}
+        ></ha-form>
+        <ha-form
+          .hass=${this.hass}
+          .data=${this._getVisibilityData()}
+          .schema=${[VISIBILITY_SCHEMA[1], VISIBILITY_SCHEMA[3]]}
+          .computeLabel=${this._computeLabel}
+          @value-changed=${this._visibilityChanged}
+        ></ha-form>
+      </div>
+      <ha-form
+        .hass=${this.hass}
+        .data=${this._getVisibilityData()}
+        .schema=${[VISIBILITY_SCHEMA[4]]}
+        .computeLabel=${this._computeLabel}
+        @value-changed=${this._visibilityChanged}
       ></ha-form>
 
       <ha-expansion-panel outlined>
