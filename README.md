@@ -1,9 +1,6 @@
 # StreakHub Card
 
-A Home Assistant Lovelace card for visualizing streak progress with the [StreakHub](https://github.com/MaximilianSoeworx/streakhub) integration.
-
-![StreakHub Card Preview](docs/preview.png)
-<!-- TODO: Add actual screenshot showing card variants -->
+A Home Assistant Lovelace card for visualizing streak progress with the [StreakHub](https://github.com/moerk-o/streakhub) integration.
 
 ## What is StreakHub?
 
@@ -29,13 +26,15 @@ The card displays your current streak with visual indicators showing how your cu
 ## Requirements
 
 - Home Assistant 2024.1 or newer
-- [StreakHub Integration](https://github.com/MaximilianSoeworx/streakhub) installed and configured
+- [StreakHub Integration](https://github.com/moerk-o/streakhub) installed and configured
+
+This card requires the **StreakHub Integration** which provides the backend for tracking streaks. The integration creates sensor entities that this card visualizes.
 
 ## Installation
 
 ### Manual Installation
 
-1. Download `streakhub-card.js` from the [latest release](https://github.com/MaximilianSoeworx/streakhub-card/releases)
+1. Download `streakhub-card.js` from the [latest release](https://github.com/moerk-o/streakhub-card/releases)
 2. Copy it to your Home Assistant `config/www/` folder
 3. Add the resource in Home Assistant:
    - Go to **Settings** → **Dashboards** → **Resources** (top right menu)
@@ -55,8 +54,6 @@ The card displays your current streak with visual indicators showing how your cu
 3. Select a StreakHub entity
 4. Configure options using the UI
 
-![Visual Editor](docs/editor.png)
-<!-- TODO: Add screenshot of the visual editor -->
 
 ### YAML Configuration
 
@@ -103,7 +100,6 @@ double_tap_action:
 | `name` | string | Device name | Custom name to display |
 | `variant` | string | `standard` | Display variant: `standard` or `compact` |
 | `borderless` | boolean | `false` | Hide card border and background |
-| `language` | string | `auto` | Force language: `auto`, `en`, or `de` (YAML only) |
 | `show.trophy` | boolean | `true` | Show trophy/medal icon |
 | `show.rank` | boolean | `true` | Show rank indicator (#1, #2, #3) |
 | `show.days` | boolean | `true` | Show days counter |
@@ -150,29 +146,35 @@ The `reset-flow` action is a custom action specific to StreakHub Card. It opens 
 - **Today/Yesterday/Day before**: Quick reset without confirmation
 - **More...**: Opens a calendar picker for selecting any date within your streak
 
-### Advanced: Renamed Entities (YAML only)
+### Advanced Options (YAML only)
+
+These options are only available via YAML configuration, not in the visual editor.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `language` | string | `auto` | Force language: `auto`, `en`, or `de` (see below) |
+| `service_target` | string | - | Original entity ID for service calls (see below) |
+
+#### Renamed Entities
 
 If you've renamed your StreakHub entities in Home Assistant, you may need `service_target`. When you rename an entity in the HA UI, the display changes but internally Home Assistant may still use the original entity ID for service calls. In this case:
 
 - `entity`: Your renamed entity ID (used to read state and display data)
 - `service_target`: The original entity ID (used for the `streakhub.set_streak_start` service call)
 
-```yaml
-type: custom:streakhub-card
-entity: sensor.my_custom_name       # Renamed entity (for display)
-service_target: sensor.sugar_rank   # Original entity ID (for reset service)
-```
+## Localization
 
-> **Note:** This option is only available via YAML, not in the visual editor.
+The card supports English and German. The language is determined by:
+
+1. **Card configuration** (`language: en` or `language: de`)
+2. **Home Assistant user settings** (auto-detected)
+3. **Fallback**: English
 
 ## Display Variants
 
 ### Standard Variant
 
 Vertical layout with large trophy icon, ideal as a standalone feature card.
-
-![Standard Variant](docs/variant-standard.png)
-<!-- TODO: Add screenshot of standard variant -->
 
 ```
 ┌─────────────────────────┐
@@ -188,9 +190,6 @@ Vertical layout with large trophy icon, ideal as a standalone feature card.
 ### Compact Variant
 
 Horizontal layout, perfect for dashboards with limited space or tile-style layouts.
-
-![Compact Variant](docs/variant-compact.png)
-<!-- TODO: Add screenshot of compact variant -->
 
 ```
 ┌──────────────────────────────────┐
@@ -241,14 +240,6 @@ card_mod:
 | `--streakhub-bronze` | `#CD7F32` | Bronze trophy color (rank 3) |
 | `--streakhub-neutral` | `var(--secondary-text-color)` | Medal color (rank 4+) |
 | `--streakhub-padding` | (theme default) | Card padding |
-
-## Localization
-
-The card supports English and German. The language is determined by:
-
-1. **Card configuration** (`language: en` or `language: de`)
-2. **Home Assistant user settings** (auto-detected)
-3. **Fallback**: English
 
 ## License
 
