@@ -61,6 +61,11 @@ const EDITOR_TRANSLATIONS: Record<'en' | 'de', EditorTranslations> = {
     double_tap_action: 'Double tap action',
     reset_flow: 'Reset flow',
     reset_flow_description: 'Opens streak reset dialog',
+    stats_title: 'Show Statistics',
+    stats_gold: 'Gold',
+    stats_silver: 'Silver',
+    stats_bronze: 'Bronze',
+    stats_hide_current: 'Hide current streak',
   },
   de: {
     entity: 'Entität',
@@ -76,6 +81,11 @@ const EDITOR_TRANSLATIONS: Record<'en' | 'de', EditorTranslations> = {
     double_tap_action: 'Doppeltippen',
     reset_flow: 'Reset-Ablauf',
     reset_flow_description: 'Öffnet den Streak-Reset-Dialog',
+    stats_title: 'Statistiken anzeigen',
+    stats_gold: 'Gold',
+    stats_silver: 'Silber',
+    stats_bronze: 'Bronze',
+    stats_hide_current: 'Aktuellen ausblenden',
   },
 };
 
