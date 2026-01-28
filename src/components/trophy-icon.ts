@@ -6,6 +6,8 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { CardVariant } from '../types';
 
+export type IconType = 'trophy' | 'medal';
+
 /**
  * Displays a trophy (rank 1-3) or medal (rank 4+) icon
  *
@@ -13,6 +15,7 @@ import type { CardVariant } from '../types';
  *
  * @prop {number} rank - Current rank (1, 2, 3, or 0/4+ for medal)
  * @prop {CardVariant} variant - Display variant ('standard' or 'compact')
+ * @prop {IconType} type - Icon type ('trophy' for current streak, 'medal' for statistics)
  */
 @customElement('streakhub-trophy')
 export class StreakHubTrophy extends LitElement {
@@ -21,6 +24,9 @@ export class StreakHubTrophy extends LitElement {
 
   @property({ type: String, reflect: true })
   variant: CardVariant = 'standard';
+
+  @property({ type: String, reflect: true })
+  type: IconType = 'trophy';
 
   static override styles = css`
     :host {
@@ -66,10 +72,14 @@ export class StreakHubTrophy extends LitElement {
   `;
 
   /**
-   * Get the appropriate icon based on rank
+   * Get the appropriate icon based on type and rank
    */
   private get _icon(): string {
-    // Rank 1-3 gets trophy, others get medal
+    // Medal type always shows medal icon (for statistics)
+    if (this.type === 'medal') {
+      return 'mdi:medal';
+    }
+    // Trophy type: Rank 1-3 gets trophy, others get medal-outline
     if (this.rank >= 1 && this.rank <= 3) {
       return 'mdi:trophy';
     }

@@ -150,6 +150,66 @@ export const cardStyles = css`
   }
 
   /* ==========================================================================
+     Statistics Section (Standard Mode)
+     ========================================================================== */
+
+  .stats-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--divider-color, #e0e0e0);
+    margin: 8px 0;
+  }
+
+  .stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .stats-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--primary-text-color);
+  }
+
+  .stats-entry streakhub-trophy {
+    --streakhub-trophy-size: 20px;
+    --streakhub-trophy-size-compact: 20px;
+  }
+
+  .stats-entry .stats-days {
+    font-weight: 500;
+  }
+
+  /* ==========================================================================
+     Statistics Section (Compact Mode)
+     ========================================================================== */
+
+  .compact .stats-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--secondary-text-color);
+    flex-shrink: 0;
+  }
+
+  .compact .stats-inline::before {
+    content: '(';
+  }
+
+  .compact .stats-inline::after {
+    content: ')';
+  }
+
+  .compact .stats-item {
+    white-space: nowrap;
+  }
+
+  /* ==========================================================================
      Error State
      ========================================================================== */
 

@@ -124,6 +124,17 @@ export interface ShowConfig {
   name?: boolean;
 }
 
+export interface StatsConfig {
+  /** Show gold (rank 1) in statistics */
+  gold?: boolean;
+  /** Show silver (rank 2) in statistics */
+  silver?: boolean;
+  /** Show bronze (rank 3) in statistics */
+  bronze?: boolean;
+  /** Hide current streak from statistics list (default: true) */
+  hide_current?: boolean;
+}
+
 export interface StreakHubCardConfig {
   /** Entity ID of the StreakHub rank sensor (required) */
   entity: string;
@@ -137,6 +148,8 @@ export interface StreakHubCardConfig {
   borderless?: boolean;
   /** Configure which elements to show */
   show?: ShowConfig;
+  /** Configure statistics display */
+  stats?: StatsConfig;
   /** Action on tap */
   tap_action?: ActionConfig;
   /** Action on hold/long-press */
@@ -189,6 +202,11 @@ export interface EditorTranslations {
   double_tap_action: string;
   reset_flow: string;
   reset_flow_description: string;
+  stats_title: string;
+  stats_gold: string;
+  stats_silver: string;
+  stats_bronze: string;
+  stats_hide_current: string;
 }
 
 // =============================================================================
@@ -230,7 +248,7 @@ declare global {
  * Default configuration values
  */
 export const DEFAULT_CONFIG: Required<
-  Pick<StreakHubCardConfig, 'variant' | 'borderless' | 'show' | 'language'>
+  Pick<StreakHubCardConfig, 'variant' | 'borderless' | 'show' | 'stats' | 'language'>
 > & {
   tap_action: ActionConfig;
   hold_action: ActionConfig;
@@ -243,6 +261,12 @@ export const DEFAULT_CONFIG: Required<
     rank: true,
     days: true,
     name: true,
+  },
+  stats: {
+    gold: false,
+    silver: false,
+    bronze: false,
+    hide_current: true,
   },
   tap_action: { action: 'none' },
   hold_action: { action: 'reset-flow' },

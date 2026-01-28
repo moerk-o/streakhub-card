@@ -18,6 +18,7 @@ import {
   type ExpandedState,
   type GridOptions,
   type ActionConfig,
+  type StatsConfig,
   DEFAULT_CONFIG,
   isStreakHubEntity,
   getCurrentStreak,
@@ -74,6 +75,10 @@ export class StreakHubCard extends LitElement {
       show: {
         ...DEFAULT_CONFIG.show,
         ...config.show,
+      },
+      stats: {
+        ...DEFAULT_CONFIG.stats,
+        ...config.stats,
       },
     };
 
@@ -224,6 +229,36 @@ export class StreakHubCard extends LitElement {
    */
   private get _translations(): Translations {
     return getTranslations(this.hass, this._config?.language);
+  }
+
+  /**
+   * Get visible stats entries based on config
+   */
+  private _getVisibleStats(): StreakEntry[] {
+    const entity = this._entityState;
+    if (!isStreakHubEntity(entity)) return [];
+
+    const top3 = entity.attributes.top_3;
+    const statsConfig = this._config?.stats;
+
+    // If no stats config or all disabled, return empty
+    if (!statsConfig || (!statsConfig.gold && !statsConfig.silver && !statsConfig.bronze)) {
+      return [];
+    }
+
+    const currentRank = top3.find((e) => e.end === null)?.rank;
+
+    return top3.filter((entry) => {
+      // Check if this rank is configured to show
+      if (entry.rank === 1 && !statsConfig.gold) return false;
+      if (entry.rank === 2 && !statsConfig.silver) return false;
+      if (entry.rank === 3 && !statsConfig.bronze) return false;
+
+      // Check if current streak should be hidden
+      if (statsConfig.hide_current && entry.rank === currentRank) return false;
+
+      return true;
+    });
   }
 
   /**
@@ -436,6 +471,54 @@ export class StreakHubCard extends LitElement {
   }
 
   /**
+   * Render statistics list (for standard mode)
+   */
+  private _renderStats() {
+    const visibleStats = this._getVisibleStats();
+    if (visibleStats.length === 0) return nothing;
+
+    return html`
+      <div class="stats-divider"></div>
+      <div class="stats-list">
+        ${visibleStats.map(
+          (entry) => html`
+            <div class="stats-entry">
+              <streakhub-trophy
+                rank=${entry.rank}
+                type="medal"
+                variant="compact"
+              ></streakhub-trophy>
+              <span class="stats-days"
+                >${formatDays(entry.days, this._translations)}</span
+              >
+            </div>
+          `
+        )}
+      </div>
+    `;
+  }
+
+  /**
+   * Render inline statistics (for compact mode)
+   */
+  private _renderStatsInline() {
+    const visibleStats = this._getVisibleStats();
+    if (visibleStats.length === 0) return nothing;
+
+    return html`
+      <span class="stats-inline">
+        ${visibleStats.map(
+          (entry) => html`
+            <span class="stats-item"
+              >#${entry.rank} ${formatDays(entry.days, this._translations)}</span
+            >
+          `
+        )}
+      </span>
+    `;
+  }
+
+  /**
    * Render the expansion content (reset flow or error)
    */
   private _renderExpansion() {
@@ -474,6 +557,7 @@ export class StreakHubCard extends LitElement {
           ${this._renderRank(rank)}
         </div>
         ${this._renderDays(days)}
+        ${this._renderStats()}
       </div>
       ${this._renderExpansion()}
     `;
@@ -487,7 +571,10 @@ export class StreakHubCard extends LitElement {
       <div class="compact">
         ${this._renderTrophy(rank)}
         <div class="content">
-          ${this._renderName(name)}
+          <span>
+            ${this._renderName(name)}
+            ${this._renderStatsInline()}
+          </span>
           <span>
             ${this._renderDays(days)}
             ${this._renderRank(rank)}

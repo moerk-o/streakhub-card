@@ -8,7 +8,7 @@
 
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { mdiGestureTap } from '@mdi/js';
+import { mdiGestureTap, mdiChartBoxOutline } from '@mdi/js';
 import type {
   HomeAssistant,
   StreakHubCardConfig,
@@ -74,6 +74,14 @@ const VISIBILITY_SCHEMA: HaFormSchema[] = [
   { name: 'show.rank', selector: { boolean: {} }, default: true },
   { name: 'show.days', selector: { boolean: {} }, default: true },
   { name: 'borderless', selector: { boolean: {} }, default: false },
+];
+
+// Statistics options schema
+const STATS_SCHEMA: HaFormSchema[] = [
+  { name: 'stats.gold', selector: { boolean: {} }, default: false },
+  { name: 'stats.silver', selector: { boolean: {} }, default: false },
+  { name: 'stats.bronze', selector: { boolean: {} }, default: false },
+  { name: 'stats.hide_current', selector: { boolean: {} }, default: true },
 ];
 
 // Schema for single action (used when reset-flow toggle is off)
@@ -262,6 +270,10 @@ export class StreakHubCardEditor extends LitElement {
       'show.trophy': t.trophy,
       'show.rank': t.rank,
       'show.days': t.days_counter,
+      'stats.gold': t.stats_gold,
+      'stats.silver': t.stats_silver,
+      'stats.bronze': t.stats_bronze,
+      'stats.hide_current': t.stats_hide_current,
       action: '', // Empty label for nested action selector
     };
   }
@@ -376,6 +388,37 @@ export class StreakHubCardEditor extends LitElement {
     };
   }
 
+  private _getStatsData(): Record<string, unknown> {
+    if (!this._config) return {};
+
+    return {
+      'stats.gold': this._config.stats?.gold ?? false,
+      'stats.silver': this._config.stats?.silver ?? false,
+      'stats.bronze': this._config.stats?.bronze ?? false,
+      'stats.hide_current': this._config.stats?.hide_current ?? true,
+    };
+  }
+
+  /**
+   * Handle stats form value changes
+   */
+  private _statsChanged(ev: CustomEvent): void {
+    const formData = ev.detail.value as Record<string, unknown>;
+
+    const config: StreakHubCardConfig = {
+      ...this._config,
+      stats: {
+        ...this._config?.stats,
+        gold: formData['stats.gold'] as boolean,
+        silver: formData['stats.silver'] as boolean,
+        bronze: formData['stats.bronze'] as boolean,
+        hide_current: formData['stats.hide_current'] as boolean,
+      },
+    } as StreakHubCardConfig;
+
+    this._updateConfig(config);
+  }
+
   /**
    * Render a single action editor row
    */
@@ -480,6 +523,22 @@ export class StreakHubCardEditor extends LitElement {
           ${this._renderActionRow('tap_action', t.tap_action, false)}
           ${this._renderActionRow('hold_action', t.hold_action, true)}
           ${this._renderActionRow('double_tap_action', t.double_tap_action, false)}
+        </div>
+      </ha-expansion-panel>
+
+      <ha-expansion-panel outlined>
+        <div slot="header" role="heading" aria-level="3">
+          <ha-svg-icon .path=${mdiChartBoxOutline}></ha-svg-icon>
+          ${t.stats_title}
+        </div>
+        <div class="content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._getStatsData()}
+            .schema=${STATS_SCHEMA}
+            .computeLabel=${this._computeLabel}
+            @value-changed=${this._statsChanged}
+          ></ha-form>
         </div>
       </ha-expansion-panel>
     `;
